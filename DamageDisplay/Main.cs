@@ -29,15 +29,14 @@ namespace DamageDisplay
             public float Damage { get; set; }
         }
 
-        // dictionary should be the fastest way of storing / retrieving data which is super important since this will all run on the Main thread
-        // that's not to say that other ones dont do it as well, this one is just the best for this usecase
+        // dictionary should be the fastest way of storing / retrieving data which is super important since this will all run on the Main thread (not that important, this isnt going to cause like any disruption whatsoever however noobs still need to know this) 
+        // that's not to say that other ones dont do it as well, this one is just the best for this usecase (i think im still kinda noob)
         // (effectmanager stuff needs to run on the main thread or everything explodes)
-        // blocking the main thread is what causes auto disconnecting + other lag since its stuck processing something in a noob plugin so it cannot move on to
-        // process the actual game mechanics - this is also kinda what makes uscript suck balls
-        // main thread stuff particularly becomes an issue when doing database operation such as waiting on a query to return results - this can be avoided by using async stuff
+        // blocking the main thread is what causes auto disconnecting + other lag since its stuck processing something in a noob plugin so it cannot move on to process the actual game mechanics - this is also kinda what makes uscript suck balls
+        // main thread stuff particularly becomes an issue when doing database operations such as waiting on a query to return results - this can be avoided by using async stuff (i just put it on the threadpool since who gives a shit still works)
         // which calls the thingy and then continues running the code when the result is ready allowing the main thread to continue to process other things whilst its awaiting the result
 
-        // this is also given a max size which is Provider.maxPlayers (it cannot be higher than that anyways unless a plugin changes it which is stupid)
+        // this is also given a max size which is Provider.maxPlayers (it cannot be higher than that anyways unless a plugin changes it which is stupid - just dont use it or just edit this to a fixed amount or just dont pre-allocate it at all)
         // which makes this even super faster because it doesnt need to find new memory when adding values because its already designating part of the memory entirely to this
         private Dictionary<CSteamID, EffectData> Effects = new Dictionary<CSteamID, EffectData>(Provider.maxPlayers);
 
@@ -54,6 +53,8 @@ namespace DamageDisplay
             }
 
             // starting the clear loop (runs every X amount of seconds, specified in the config)
+            // the args for this is kinda stupid (they're not named very well) 
+            // goes as follows Invokerepeating(methodname, time until it starts looping, time inbetween each repeat);
             InvokeRepeating(nameof(ClearEffects), Configuration.Instance.RepeatRate, Configuration.Instance.RepeatRate);
             // event for player disconnecting (to help stop errors later)
             Rocket.Unturned.U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
@@ -85,7 +86,7 @@ namespace DamageDisplay
 
         private void OnPlayerDisconnected(UnturnedPlayer player)
         {
-            // if player is null ignore it (sometimes it bugs out)
+            // if player is null ignore it (sometimes it bugs out i dont really know i just do this anyways)
             if (player == null)
             {
                 return;
@@ -124,7 +125,7 @@ namespace DamageDisplay
             // check if the player exists, check if the damage actually happens, check if the killer exists
             // player should never be null but unturned is dogshit so check anyways
             // canDamage could be from invalids / other shit
-            // killer can be null if the killer is a sentry owner and the killer is offline, or if the player takes environment damage i think
+            // killer can be null if the killer is a sentry owner and the killer is offline, or if the player takes environment damage i think i dont really know
             if (player == null)return;
             if (!canDamage)return;
             if (killer == null)return;
@@ -133,11 +134,11 @@ namespace DamageDisplay
 
 
             // ngl only found this out from https://github.com/0x59R11-Unturned/DarkDamageDetector/blob/master/DarkDamageDetector/DarkDamageDetectorPlugin.cs because i was too lazy to 
-            // get it myself
+            // get it myself, thanks!! (sorry if i wasnt meant to do that)
             float armorMulti = DamageTool.getPlayerArmor(limb, player.Player);
             byte totalDamage = (byte)Math.Min(byte.MaxValue, Mathf.FloorToInt(damage * armorMulti));
 
-            // if it all exists, call this            
+            // if it all exists, call this to update the thingy thing           
             UpdatePlayer(killer.Player, totalDamage);
         }
 
@@ -182,7 +183,7 @@ namespace DamageDisplay
             // send the new text to the existing ui / the one i just sent to the player
             EffectManager.sendUIEffectText((short)(short.MaxValue - Configuration.Instance.EffectId), instigator.channel.owner.transportConnection,
                 true, "epicText", sentText);
-            // epicText is the name of the text UI element from the unity effect
+            // epicText is the name of the text UI element from the unity effect - probably should be renamed so you know what it is but who cares!!
 
         }
         private List<CSteamID> toRemove = new List<CSteamID>();
@@ -191,20 +192,19 @@ namespace DamageDisplay
         {
             // this might cause a slight amount of lag if there is a million people that need cleared but it shouldnt really be a problem
             DateTime now = DateTime.Now;
-            // so basically i need to add them all to this and loop through this individually since i cant remove it from the dictionary
-            // from the foreach loop below this
+            // so basically i need to add them all to this and loop through this individually since i cant remove it from the dictionary from the foreach loop below this (it also blows up the whole world)
 
             // for every dictionary thing where the clearTime is past right now (ie its gone out of date lol!!)
             foreach (KeyValuePair<CSteamID, EffectData> kvp in Effects.Where(x => x.Value.ClearTime < now))
             {
                 // clear the effect and remove them from the dictionary
-                // this is obsolete but it doesnt really matter because it still fuckin works lol!
+                // this is obsolete but it doesnt really matter because it still fuckin works lol!!!
                 EffectManager.askEffectClearByID(Configuration.Instance.EffectId, kvp.Key);
 
                 // add the player to the thing to clear it
                 toRemove.Add(kvp.Key);
             }
-
+            // then run this right after that to remove them from the dict
             foreach(CSteamID plrId in toRemove)
             {
                 _ = Effects.Remove(plrId);
@@ -218,11 +218,11 @@ namespace DamageDisplay
 
     public class Config : IRocketPluginConfiguration
     {
-        // making this togglable so you can just turn this off (mainly using it for debug since aki wont fucking join for player damage)
+        // making this a bool so you can just turn this off (mainly using it for debug since aki wont fucking join for player damage)
         public bool ShowZombieAndBarricade { get; set; }
         // the effect id if you could believe it
         public ushort EffectId { get; set; }
-        // the delay before clearing the effect (this wont be accurate because it only clears all of them on the repeat rate thing)
+        // the delay before clearing the effect (this wont be that accurate because it only clears all of them on the repeat rate thing)
         public float ClearDelay { get; set; }
         // the time it takes between checking who needs their shit cleared
         public float RepeatRate { get; set; }
