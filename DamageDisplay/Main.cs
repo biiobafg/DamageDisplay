@@ -46,22 +46,40 @@ namespace DamageDisplay
         //update: adding this so players can disable the ui
         private HashSet<Player> DisabledPlayers = new HashSet<Player>();
 
-
         [RocketCommand("damageui", "")]
         public void execute(IRocketPlayer caller, string[] args)
         {
             if (caller == null) return;
-            if (caller is Player)
+            if (caller is UnturnedPlayer)
             {
-                Player player = (Player)caller;
-                if (!DisabledPlayers.Contains(player) ^ Configuration.Instance.DisabledByDefault)
+                Player player = (caller as UnturnedPlayer).Player;
+
+                // there is probably a much easier and cleaner way of doing this but i really dont care enough to rework it
+
+                // basically, if the damage ui is NOT disabled by default then it will run the default logic for the player to enable / disable it
+                if (!Configuration.Instance.DisabledByDefault)
                 {
-                    DisabledPlayers.Add(player);
-                    UnturnedChat.Say(caller, "Disabled damage Display", color:Color.red);
-                    return;
+                    if (!DisabledPlayers.Contains(player))
+                    {
+                        DisabledPlayers.Add(player);
+                        UnturnedChat.Say(caller, "Disabled damage Display", color: Color.red);
+                        return;
+                    }
+                    DisabledPlayers.Remove(player);
+                    UnturnedChat.Say(caller, "Enabled damage Display", color: Color.red);
                 }
-                DisabledPlayers.Remove(player);
-                UnturnedChat.Say(caller, "Enabled damage Display", color: Color.red);
+                // if the ui is disabled by default it just switches the messages sent to the player 
+                else
+                {
+                    if (!DisabledPlayers.Contains(player))
+                    {
+                        DisabledPlayers.Add(player);
+                        UnturnedChat.Say(caller, "Enabled damage Display", color: Color.red);
+                        return;
+                    }
+                    DisabledPlayers.Remove(player);
+                    UnturnedChat.Say(caller, "Disabled damage Display", color: Color.red);
+                }
             }
         }
 
